@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" font-family="ui-sans-serif, system-ui, sans-serif">
+  <rect width="820" height="360" fill="#0f1115"/>
+
+  <!-- ===== LEFT PANEL: CURRENT (BUG) ===== -->
+  <text x="200" y="34" fill="#f85149" font-size="18" font-weight="700" text-anchor="middle">Current — edges snap to the square div</text>
+
+  <!-- circle with bounding box -->
+  <rect x="70" y="120" width="120" height="120" fill="none" stroke="#f85149" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <circle cx="130" cy="180" r="58" fill="#1f6feb" stroke="#8ab4ff" stroke-width="2"/>
+  <!-- diamond with bounding box -->
+  <rect x="250" y="120" width="120" height="120" fill="none" stroke="#f85149" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <polygon points="310,122 368,180 310,238 252,180" fill="#1f6feb" stroke="#8ab4ff" stroke-width="2"/>
+
+  <!-- buggy edge: from circle box top-right corner area to diamond box left-mid (floats off shapes) -->
+  <path d="M190,130 C220,150 230,170 250,180" fill="none" stroke="#c9d1d9" stroke-width="2.5"/>
+  <!-- floating endpoints -->
+  <circle cx="190" cy="130" r="6" fill="none" stroke="#f85149" stroke-width="2.5"/>
+  <circle cx="250" cy="180" r="6" fill="none" stroke="#f85149" stroke-width="2.5"/>
+  <text x="200" y="290" fill="#f85149" font-size="12.5" text-anchor="middle">endpoints sit on the box,</text>
+  <text x="200" y="308" fill="#f85149" font-size="12.5" text-anchor="middle">floating off the outline</text>
+
+  <!-- divider -->
+  <line x1="410" y1="20" x2="410" y2="340" stroke="#30363d" stroke-width="1"/>
+
+  <!-- ===== RIGHT PANEL: DESIRED ===== -->
+  <text x="620" y="34" fill="#3fb950" font-size="18" font-weight="700" text-anchor="middle">Desired — edges snap to the outline</text>
+
+  <rect x="490" y="120" width="120" height="120" fill="none" stroke="#30363d" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <circle cx="550" cy="180" r="58" fill="#1f6feb" stroke="#8ab4ff" stroke-width="2"/>
+  <rect x="670" y="120" width="120" height="120" fill="none" stroke="#30363d" stroke-dasharray="5 4" stroke-width="1.5"/>
+  <polygon points="730,122 788,180 730,238 672,180" fill="#1f6feb" stroke="#8ab4ff" stroke-width="2"/>
+
+  <!-- correct edge: circle outline to diamond left vertex, endpoints ON the lines -->
+  <path d="M604,152 C640,166 660,176 672,180" fill="none" stroke="#c9d1d9" stroke-width="2.5"/>
+  <circle cx="604" cy="152" r="6" fill="none" stroke="#3fb950" stroke-width="2.5"/>
+  <circle cx="672" cy="180" r="6" fill="none" stroke="#3fb950" stroke-width="2.5"/>
+  <text x="620" y="290" fill="#3fb950" font-size="12.5" text-anchor="middle">endpoints land exactly</text>
+  <text x="620" y="308" fill="#3fb950" font-size="12.5" text-anchor="middle">on each shape's edge</text>
+</svg>

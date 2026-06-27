@@ -1,0 +1,127 @@
+:root {
+  --bg: #fefefe;
+  --grid: #1c2130;
+  --node-fill: #1f6feb;
+  --node-stroke: #8ab4ff;
+  --node-text: #ffffff;
+  --edge: #8986c0;
+  --panel-bg: #161b22;
+  --panel-border: #30363d;
+  --panel-text: #c9d1d9;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    sans-serif;
+}
+
+.flow-wrapper {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* --- Shape node ----------------------------------------------------------- */
+/* The node's outer div is intentionally a square box. The SVG inside draws the
+   actual shape. This is what makes the snapping problem visible: the default
+   geometry attaches edges to THIS box, not to the drawn shape. */
+.shape-node {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.shape-node svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.shape-node .shape-path {
+  fill: var(--node-fill);
+  stroke: var(--node-stroke);
+  stroke-width: 2;
+}
+
+.shape-node .shape-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--node-text);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  text-align: center;
+  padding: 0 6px;
+}
+
+/* Cardinal connection handles — small dots at the centre of each side.
+   They appear on hover so the shape stays clean at rest, and disappear
+   again when the pointer leaves. ConnectionMode.Loose makes them act as
+   both source and target. Dropping a connection NEAR one (within
+   connectionRadius) reuses it; dropping anywhere else on a side creates a
+   custom handle pinned at that exact point (see onConnectEnd in App.tsx). */
+.shape-node .cardinal-handle {
+  width: 10px;
+  height: 10px;
+  background: var(--node-stroke);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+
+.shape-node:hover .cardinal-handle,
+.shape-node .cardinal-handle:hover {
+  opacity: 1;
+}
+
+/* Make the reconnect anchors (edge updater dots) easy to see while testing. */
+.react-flow__edgeupdater {
+  cursor: grab;
+}
+
+/* Debug helper: outline the square bounding box so candidates can SEE the gap
+   between the box and the drawn shape. Toggle from the panel. */
+.debug-bbox .shape-node {
+  outline: 1px dashed #f85149;
+  outline-offset: 0;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--panel-text);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 260px;
+}
+
+.panel h1 {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.panel label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}

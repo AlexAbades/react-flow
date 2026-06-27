@@ -1,7 +1,6 @@
 # Write-up
 
-> Fill this in. We care more about your thinking than about a perfect result.
-> 10–20 minutes of writing is plenty. Bullet points are fine.
+When working on a new project, such as this one, I like to understand what I'll be working with. My first hour of the project is getting familiar with the project, reading the Readme, the comments of the files, some functions and getting familiar with ReactFlow; its functions, the internal state, and how renders different components related to the project.
 
 ## How far did I get?
 

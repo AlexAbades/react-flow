@@ -2,7 +2,7 @@
 
 > **TL;DR:** In a React Flow canvas you can drop an edge anywhere on a node's side and it pins there for good. But the pinned point is computed on the invisible **square** bounding box, so for anything that isn't a rectangle the edge floats off the **drawn shape**. Make those fixed connection points sit on the shape's outline, and make the connection endpoint easy to grab even when it sits on top of a node.
 
-![Current vs desired](docs/problem-vs-desired.svg)
+![Current vs desired](docs/screenshots/problem-vs-desired.svg)
 
 ---
 
@@ -23,6 +23,11 @@ So this is **not** a floating-edge exercise. The endpoints are fixed. The only t
 A common workaround you'll find online is to drop React Flow and draw everything on an HTML `<canvas>`. **That is not an option here.** The surrounding product is built deeply on React Flow, so the fix has to live inside it.
 
 This repo is a minimal reproduction with the bug already wired up. Your job is to fix it.
+
+### Further reading
+
+- [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — full walkthrough of how this project is wired up, with React Flow vocabulary for newcomers.
+- [`docs/USE_STORE_VS_USE_STORE_API.md`](docs/USE_STORE_VS_USE_STORE_API.md) — when to use `useStore` vs `useStoreApi`, with examples from this repo.
 
 > ⏱️ **Expected effort:** about 2 to 4 focused hours. It's fine to stop early; see [What to submit](#what-to-submit). We're hiring for judgement, not for who can grind the longest.
 >
@@ -67,7 +72,7 @@ Useful scripts:
 
 On first load you get several differently-shaped nodes joined by edges. Tick **"Show node bounding boxes"** in the top-left panel to reveal the square `<div>` behind each shape. That makes the problem obvious:
 
-![Edges attach to the square box, not the shape](docs/example-current-state.png)
+![Edges attach to the square box, not the shape](docs/screenshots/example-current-state.png)
 
 Notice how every edge lands on the **red dashed square**, not on the diamond, hexagon, triangle, circle or star. That's the bug. Try it yourself: drag from one shape to another and drop **anywhere on a side**. The edge pins to that spot (good) but the spot sits on the square box, not the outline (the bug).
 

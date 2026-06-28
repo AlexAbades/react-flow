@@ -1,5 +1,5 @@
 import { Position, type Node, type XYPosition } from 'reactflow';
-import { isDefaultHandleId, type ShapeNodeData } from '../nodes/shapes';
+import { isDefaultHandleId, SHAPES, type ShapeKind, type ShapeNodeData } from '../nodes/shapes';
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 
@@ -115,42 +115,213 @@ export function getEdgeParams(
 }
 
 /* ===========================================================================
- * 🟥  CHALLENGE #1 — PROBABLY STARTS HERE  🟥
+ * Outline-aware geometry
  *
- * This is our best guess at where the fix goes, not a spec. If you find a
- * cleaner approach or decide the real fix belongs elsewhere, go for it — we're
- * pointing you at a starting line, not boxing you in.
+ * Endpoints are stored as a fixed (side, pct) on the bounding box. To make
+ * them land on the drawn shape rather than the square, we cast a ray from
+ * the bounding-box parameterisation INWARD (perpendicular to the side) and
+ * find the first intersection with the shape outline.
  *
- * Every edge endpoint is a FIXED point on a node: a side (top/right/bottom/left)
- * plus a fraction (0–1) along that side. sideAndPctToPos() turns that stored
- * point back into absolute canvas coordinates so the edge can render, and the
- * point never moves relative to the node, no matter how nodes are dragged.
- *
- * RIGHT NOW it maps onto the node's rectangular bounding box. That is the bug:
- * for a circle, diamond, triangle, hexagon or star the endpoint sits on the
- * invisible square, floating off the drawn outline. The goal is to make it land
- * on the actual drawn shape. The shape kind is available at `node.data.shape`.
- *
- * The live drag preview uses closestSidePoint() below (also bounding-box based),
- * so a complete solution will usually want to touch that too.
- * (Maths reference: https://reactflow.dev/examples/edges/floating-edges)
+ * `sideAndPctToPos` and `closestSidePoint` share one helper (`rayToOutline`)
+ * so they stay consistent — whatever `closestSidePoint` snaps to during a
+ * drop, `sideAndPctToPos` produces the same pixel when the edge later
+ * renders.
  * ======================================================================== */
-export function sideAndPctToPos(
+
+type Vertex = [number, number]; // (x, y) in the 0..100 viewBox
+type RayDirection = 'down' | 'up' | 'left' | 'right';
+
+const SIDE_TO_RAY: Record<Side, RayDirection> = {
+  top: 'down',
+  bottom: 'up',
+  left: 'right',
+  right: 'left',
+};
+
+// The circle node draws <ellipse cx=50 cy=50 rx=47 ry=47> in the 0..100 viewBox.
+const CIRCLE_RADIUS_FRAC = 0.47;
+
+// Polygon point strings never change, so parse them once per shape kind.
+const polygonCache = new Map<ShapeKind, Vertex[]>();
+function getPolygonPoints(kind: ShapeKind): Vertex[] | null {
+  const def = SHAPES[kind];
+  if ('ellipse' in def) return null;
+  let cached = polygonCache.get(kind);
+  if (!cached) {
+    cached = def.points
+      .trim()
+      .split(/\s+/)
+      .map((p) => p.split(',').map(Number) as Vertex);
+    polygonCache.set(kind, cached);
+  }
+  return cached;
+}
+
+interface RayHit {
+  x: number;
+  y: number;
+  dist: number;
+}
+
+function intersectRayWithSegment(
+  rx: number,
+  ry: number,
+  dir: RayDirection,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): RayHit | null {
+  if (dir === 'down' || dir === 'up') {
+    if (ax === bx) return null; // segment parallel to ray
+    const minX = Math.min(ax, bx);
+    const maxX = Math.max(ax, bx);
+    if (rx < minX || rx > maxX) return null;
+    const t = (rx - ax) / (bx - ax);
+    const y = ay + t * (by - ay);
+    const dist = dir === 'down' ? y - ry : ry - y;
+    if (dist < 0) return null;
+    return { x: rx, y, dist };
+  }
+  if (ay === by) return null;
+  const minY = Math.min(ay, by);
+  const maxY = Math.max(ay, by);
+  if (ry < minY || ry > maxY) return null;
+  const t = (ry - ay) / (by - ay);
+  const x = ax + t * (bx - ax);
+  const dist = dir === 'right' ? x - rx : rx - x;
+  if (dist < 0) return null;
+  return { x, y: ry, dist };
+}
+
+function intersectRayWithEllipse(
+  rx: number,
+  ry: number,
+  dir: RayDirection,
+  cx: number,
+  cy: number,
+  a: number, // semi-axis x
+  b: number, // semi-axis y
+): RayHit | null {
+  if (dir === 'down' || dir === 'up') {
+    const dx = rx - cx;
+    const inside = 1 - (dx * dx) / (a * a);
+    if (inside < 0) return null;
+    const off = b * Math.sqrt(inside);
+    const y1 = cy - off; // top of ellipse at this x
+    const y2 = cy + off; // bottom of ellipse at this x
+    if (dir === 'down') {
+      if (y1 >= ry) return { x: rx, y: y1, dist: y1 - ry };
+      if (y2 >= ry) return { x: rx, y: y2, dist: y2 - ry };
+      return null;
+    }
+    if (y2 <= ry) return { x: rx, y: y2, dist: ry - y2 };
+    if (y1 <= ry) return { x: rx, y: y1, dist: ry - y1 };
+    return null;
+  }
+  const dy = ry - cy;
+  const inside = 1 - (dy * dy) / (b * b);
+  if (inside < 0) return null;
+  const off = a * Math.sqrt(inside);
+  const x1 = cx - off;
+  const x2 = cx + off;
+  if (dir === 'right') {
+    if (x1 >= rx) return { x: x1, y: ry, dist: x1 - rx };
+    if (x2 >= rx) return { x: x2, y: ry, dist: x2 - rx };
+    return null;
+  }
+  if (x2 <= rx) return { x: x2, y: ry, dist: rx - x2 };
+  if (x1 <= rx) return { x: x1, y: ry, dist: rx - x1 };
+  return null;
+}
+
+/**
+ * Cast a ray from (startX, startY) on the bounding box, perpendicular to a
+ * side, and return the first point it meets on the drawn outline. Falls back
+ * to the start point if the shape is unknown or no intersection exists, so
+ * the worst-case is the old bounding-box behaviour — never NaN.
+ */
+function rayToOutline(
   node: MeasuredNode,
-  side: string,
-  pct: number,
+  startX: number,
+  startY: number,
+  dir: RayDirection,
 ): XYPosition {
+  const shapeKind = (node.data as ShapeNodeData).shape;
+  const def = SHAPES[shapeKind];
+  const nx = node.positionAbsolute.x;
+  const ny = node.positionAbsolute.y;
+  const w = node.width;
+  const h = node.height;
+
+  if ('ellipse' in def) {
+    const hit = intersectRayWithEllipse(
+      startX,
+      startY,
+      dir,
+      nx + w * 0.5,
+      ny + h * 0.5,
+      w * CIRCLE_RADIUS_FRAC,
+      h * CIRCLE_RADIUS_FRAC,
+    );
+    return hit ? { x: hit.x, y: hit.y } : { x: startX, y: startY };
+  }
+
+  const pts = getPolygonPoints(shapeKind);
+  if (!pts) return { x: startX, y: startY };
+
+  let best: RayHit | null = null;
+  for (let i = 0; i < pts.length; i++) {
+    const [pax, pay] = pts[i];
+    const [pbx, pby] = pts[(i + 1) % pts.length];
+    const ax = nx + (pax / 100) * w;
+    const ay = ny + (pay / 100) * h;
+    const bx = nx + (pbx / 100) * w;
+    const by = ny + (pby / 100) * h;
+    const hit = intersectRayWithSegment(startX, startY, dir, ax, ay, bx, by);
+    if (hit && (!best || hit.dist < best.dist)) best = hit;
+  }
+
+  return best ? { x: best.x, y: best.y } : { x: startX, y: startY };
+}
+
+function isSide(s: string): s is Side {
+  return s === 'top' || s === 'right' || s === 'bottom' || s === 'left';
+}
+
+function bboxStartPoint(
+  node: MeasuredNode,
+  side: Side,
+  pct: number,
+): { startX: number; startY: number } {
   const nx = node.positionAbsolute.x;
   const ny = node.positionAbsolute.y;
   const w = node.width;
   const h = node.height;
   switch (side) {
-    case 'top':    return { x: nx + pct * w, y: ny };
-    case 'bottom': return { x: nx + pct * w, y: ny + h };
-    case 'left':   return { x: nx,           y: ny + pct * h };
-    case 'right':  return { x: nx + w,       y: ny + pct * h };
-    default:       return { x: nx + w / 2,   y: ny + h / 2 };
+    case 'top':    return { startX: nx + pct * w, startY: ny };
+    case 'bottom': return { startX: nx + pct * w, startY: ny + h };
+    case 'left':   return { startX: nx,           startY: ny + pct * h };
+    case 'right':  return { startX: nx + w,       startY: ny + pct * h };
   }
+}
+
+/**
+ * Convert a stored (side, pct) endpoint to a pixel on the shape's outline.
+ */
+export function sideAndPctToPos(
+  node: MeasuredNode,
+  side: string,
+  pct: number,
+): XYPosition {
+  if (!isSide(side)) {
+    return {
+      x: node.positionAbsolute.x + node.width / 2,
+      y: node.positionAbsolute.y + node.height / 2,
+    };
+  }
+  const { startX, startY } = bboxStartPoint(node, side, pct);
+  return rayToOutline(node, startX, startY, SIDE_TO_RAY[side]);
 }
 
 /**
@@ -182,15 +353,16 @@ export function handleToSidePct(
 }
 
 /**
- * Given a cursor position (cx, cy), find the closest point on the node's
- * bounding-box border and return it as a {side, pct, x, y}.  Used by the
- * connection-line preview so the user can place an edge anywhere on any side.
+ * Given a cursor (cx, cy), find the closest point on the drawn outline and
+ * report it as {side, pct, x, y}. `pct` stays a fraction along the
+ * bounding-box side so the result round-trips back through sideAndPctToPos
+ * exactly — the snap point during a drop matches the rendered endpoint.
  */
 export function closestSidePoint(
   node: MeasuredNode,
   cx: number,
   cy: number,
-): { side: 'top' | 'right' | 'bottom' | 'left'; pct: number; x: number; y: number } {
+): { side: Side; pct: number; x: number; y: number } {
   const nx = node.positionAbsolute.x;
   const ny = node.positionAbsolute.y;
   const w = node.width;
@@ -199,14 +371,25 @@ export function closestSidePoint(
   const clampedX = Math.max(nx, Math.min(nx + w, cx));
   const clampedY = Math.max(ny, Math.min(ny + h, cy));
 
-  const candidates: { side: 'top' | 'right' | 'bottom' | 'left'; pct: number; x: number; y: number }[] = [
-    { side: 'left',   x: nx,     y: clampedY, pct: (clampedY - ny) / h },
-    { side: 'right',  x: nx + w, y: clampedY, pct: (clampedY - ny) / h },
-    { side: 'top',    x: clampedX, y: ny,     pct: (clampedX - nx) / w },
-    { side: 'bottom', x: clampedX, y: ny + h, pct: (clampedX - nx) / w },
+  const candidates: { side: Side; pct: number }[] = [
+    { side: 'left',   pct: (clampedY - ny) / h },
+    { side: 'right',  pct: (clampedY - ny) / h },
+    { side: 'top',    pct: (clampedX - nx) / w },
+    { side: 'bottom', pct: (clampedX - nx) / w },
   ];
 
-  return candidates.reduce((best, c) =>
-    Math.hypot(c.x - cx, c.y - cy) < Math.hypot(best.x - cx, best.y - cy) ? c : best,
-  );
+  let best: { side: Side; pct: number; x: number; y: number } | null = null;
+  let bestDist = Infinity;
+
+  for (const cand of candidates) {
+    const { startX, startY } = bboxStartPoint(node, cand.side, cand.pct);
+    const hit = rayToOutline(node, startX, startY, SIDE_TO_RAY[cand.side]);
+    const d = Math.hypot(hit.x - cx, hit.y - cy);
+    if (d < bestDist) {
+      bestDist = d;
+      best = { side: cand.side, pct: cand.pct, x: hit.x, y: hit.y };
+    }
+  }
+
+  return best!;
 }

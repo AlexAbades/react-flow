@@ -26,6 +26,13 @@ you fix it (or what got in the way)?
 
 ## Trade-offs & things I'd do with more time
 
+With the Ray casting we are creating an array that points to the vartex of the shape, nevertheless, the handler still lives in the div, so we have to move the handler to the vertex of the shape. This creates two problems: 
+- We cannot grab the end of the edge (the arrow), which makes it hard to move an existing edge arroud. 
+- When we move the edge and we are in edit mode, the edge will not appear on the vertex of the shape, as the handler still lives in the div, and the edge will be drawn from the div to the vertex of the shape. That's not a good UI.
+
+Additionally, the arrow are not perpendicular to the vertex of the shape. This will also be a nice to have for the UI to have a perfect connection between the edge and the shape.
+
+
 
 
 ## How I used AI tools (if at all)

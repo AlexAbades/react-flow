@@ -27,6 +27,8 @@ This repo is a minimal reproduction with the bug already wired up. Your job is t
 ### Further reading
 
 - [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — full walkthrough of how this project is wired up, with React Flow vocabulary for newcomers.
+- [`docs/CHALLENGE_1_PRIMER.md`](docs/CHALLENGE_1_PRIMER.md) — the concepts and maths you need before attempting Challenge 1 (coord systems, SVG scaling, ray–segment intersection, pitfalls).
+- [`docs/CUSTOM_HANDLES.md`](docs/CUSTOM_HANDLES.md) — deep dive into the custom-handle lifecycle: how a drop in empty space becomes a permanent, measured handle.
 - [`docs/USE_STORE_VS_USE_STORE_API.md`](docs/USE_STORE_VS_USE_STORE_API.md) — when to use `useStore` vs `useStoreApi`, with examples from this repo.
 
 > ⏱️ **Expected effort:** about 2 to 4 focused hours. It's fine to stop early; see [What to submit](#what-to-submit). We're hiring for judgement, not for who can grind the longest.

@@ -5,7 +5,7 @@ Realize that I still have a lot to learn about ReactFLow and probably React stat
 
 ## How far did I get?
 
-- [ ] Challenge 1 — edges snap to the shape outline
+- [X] Challenge 1 — edges snap to the shape outline
 - [ ] Challenge 2 — endpoints are grabbable and render above the node
 
 ## Challenge 1 — snapping to the outline
@@ -37,4 +37,8 @@ Additionally, the arrow are not perpendicular to the vertex of the shape. This w
 
 ## How I used AI tools (if at all)
 
-Which tools, what they got right, and where you had to override them.
+Mostly I have used AI for two things: 
+- To get an understanding of the project, how does react flow work, different functions, and how to use them.
+- Get familiar with the state from react flow, and how to use it to get the information I need to solve the challenges.
+- Generate code snippets and explanations to help implement the solutions.
+- Implement the solution once I knew in which direction should I go.

@@ -1,6 +1,7 @@
 # Write-up
 
 When working on a new project, such as this one, I like to understand what I'll be working with. My first hour of the project is getting familiar with the project, reading the Readme, the comments of the files, some functions and getting familiar with ReactFlow; its functions, the internal state, and how renders different components related to the project.
+Realize that I still have a lot to learn about ReactFLow and probably React states.
 
 ## How far did I get?
 
@@ -11,6 +12,10 @@ When working on a new project, such as this one, I like to understand what I'll 
 
 How did you approach it? What does your intersection logic do for each shape?
 If you didn't finish, what did you try and where did it break down?
+
+- First thoughts before reading the docs was to just change the divs shape (never thought I will need to look into this). 
+The problem that I came to realize after reading the project is that we need to keep the (side, pct) of the edge, and that is not possible if we change the shape of the div as we will have rafactor to many things, we will no longer have only four sides, and the intersection logic will be more complex.
+- Then I looked on the formulas the ReadMe pointet out and also what claude suggested. The idea will be to "materialize" the edges in the closest point of the shape, and then use the intersection logic to find the closest point on the shape outline. This requeries that we have the shapes defined in a way that we can find the closest point on the outline. Kind of a projection of the point from the div to the outline of the shape. 
 
 ## Challenge 2 — grab & raise the endpoint
 
